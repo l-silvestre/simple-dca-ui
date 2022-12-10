@@ -4,12 +4,24 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
+import WalletCard from './components/WalletCard';
+import Header from './components/Header';
+import SideMenu from './components/SideMenu';
+
+const client = new ApolloClient({
+  uri: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
+  cache: new InMemoryCache(),
+});
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <ApolloProvider client={client}>
+      <SideMenu />
+    </ApolloProvider>,
   </React.StrictMode>
 );
 
