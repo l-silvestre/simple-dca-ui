@@ -2,6 +2,8 @@ import './App.css';
 import { useQuery } from '@apollo/react-hooks';
 import gql from 'graphql-tag';
 import { getAddress, isAddress } from 'ethers/lib/utils';
+import { Avatar } from '@mui/material';
+import { POOLS_QUERY } from './queries';
 
 
 
@@ -85,12 +87,13 @@ const TokensListDisplay = (props: { tokens: ITokenDisplay[] }) => {
 }
 
 const PairList = (props: { usdcId: string }) => {
-  const { loading: pairLoading, data, error } = useQuery(POOL_LIST_QUERY, {
+  const { loading: pairLoading, data, error } = useQuery(POOLS_QUERY, {
     variables: {
       tokenId: props.usdcId,
     }
   });
   const pairsList: IPairDisplay[] = data && data.pools;
+  // const { usdcFirstPairs, usdcSecondPairs }: IPairDisplay[] = data;
 
   return pairLoading ? <p>Loading...</p> : pairsList && <ul>{pairsList.map(pair => {
     const token0 = pair.token0;
@@ -100,8 +103,8 @@ const PairList = (props: { usdcId: string }) => {
     const addr1 = getAddress(token1.id);
     const url1 = `https://raw.githubusercontent.com/Uniswap/assets/master/blockchains/ethereum/assets/${addr1}/logo.png`
     return <li>
-      <p>{token0.symbol}<img src={url}/></p>
-      <p>{token1.symbol}<img src={url1}/></p>
+      <Avatar  src={url}>{token0.symbol}</Avatar>
+      <Avatar  src={url1}>{token1.symbol}</Avatar>
     </li>
   })}</ul>
   //return pairLoading ? <p>Loading...</p> : error ? <p>{error.message}</p> : <p>{JSON.stringify(data)}</p>;

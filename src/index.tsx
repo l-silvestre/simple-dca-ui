@@ -8,6 +8,7 @@ import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
 import WalletCard from './components/WalletCard';
 import Header from './components/Header';
 import SideMenu from './components/SideMenu';
+import Metamask from './components/metamask';
 
 const client = new ApolloClient({
   uri: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
@@ -20,7 +21,9 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <ApolloProvider client={client}>
-      <SideMenu />
+      <Metamask />
+      {/* <SideMenu /> */}
+
     </ApolloProvider>,
   </React.StrictMode>
 );

@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-declare global {
-  interface Window {
-      ethereum: any;
-  }
-}
-
 const WalletCard = () => {
   const [haveMetamask, sethaveMetamask] = useState(true);
   const [accountAddress, setAccountAddress] = useState('');
