@@ -29,4 +29,17 @@ export const POOLS_QUERY = gql`
       }
     }
   }
-`
+`;
+
+export const TOKEN_INFO_LIST_QUERY = gql`
+  query tokens($skip: Int!, $limit: Int!) {
+    tokens(orderBy: volumeUSD, orderDirection: desc, first: $limit, skip: $skip) {
+      symbol,
+      name,
+      id,
+      volume,
+      derivedETH
+    }
+  }
+`;
+

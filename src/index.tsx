@@ -1,14 +1,45 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
 import reportWebVitals from './reportWebVitals';
 
 import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
-import WalletCard from './components/WalletCard';
-import Header from './components/Header';
-import SideMenu from './components/SideMenu';
-import Metamask from './components/metamask';
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
+import { Root } from './routes/root';
+import { ErrorPage } from './routes/error';
+import { Dashboard } from './routes/dashboard';
+import { Invest } from './routes/invest';
+import { Stats } from './routes/stats';
+import { History } from './routes/history';
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <Root />,
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: '/dashboard',
+        element: <Dashboard />,
+      },
+      {
+        path: '/invest',
+        element: <Invest />,
+      },
+      {
+        path: '/stats',
+        element: <Stats />,
+      },
+      {
+        path: '/history',
+        element: <History />
+      }
+    ]
+  },
+]);
 
 const client = new ApolloClient({
   uri: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3',
@@ -21,9 +52,7 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <ApolloProvider client={client}>
-      <Metamask />
-      {/* <SideMenu /> */}
-
+      < RouterProvider router={router}/>
     </ApolloProvider>,
   </React.StrictMode>
 );
