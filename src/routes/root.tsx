@@ -1,4 +1,4 @@
-import Header from "../components/Header";
+import { Header } from "../components/Header";
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -12,12 +12,14 @@ import ListItemText from '@mui/material/ListItemText';
 import { Outlet, useNavigate } from "react-router-dom";
 import { Container } from "@mui/material";
 import GitHubIcon from '@mui/icons-material/GitHub';
-import { MutableRefObject, useEffect, useRef, useState } from "react";
+import { MutableRefObject, useContext, useEffect, useRef, useState } from "react";
+import { Web3Context } from "../web3Context";
 
 const drawerWidth = 240;
 
 export const Root = () => {
   // const outletElement = useOutlet(null);
+  const ethereum = useContext(Web3Context);
   const [ selectedRoute, setSelectedRoute ] = useState('dashboard');
   const navigate = useNavigate();
 
@@ -60,18 +62,21 @@ export const Root = () => {
             </ListItemButton>
             <ListItemButton
               selected={selectedRoute === 'invest'}
+              disabled={!!ethereum}
               onClick={(event) => handleListItemClick(event, 'invest')}
             >
               <ListItemText primary='Invest' />
             </ListItemButton>
             <ListItemButton
               selected={selectedRoute === 'history'}
+              disabled={!!ethereum}
               onClick={(event) => handleListItemClick(event, 'history')}
             >
               <ListItemText primary='History'/>
             </ListItemButton>
             <ListItemButton
               selected={selectedRoute === 'stats'}
+              disabled={!!ethereum}
               onClick={(event) => handleListItemClick(event, 'stats')}
             >
               <ListItemText primary='Stats'/>

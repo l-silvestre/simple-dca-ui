@@ -14,6 +14,8 @@ import { Dashboard } from './routes/dashboard';
 import { Invest } from './routes/invest';
 import { Stats } from './routes/stats';
 import { History } from './routes/history';
+import { ethers } from 'ethers';
+import { Web3Provider } from './web3Context';
 
 const router = createBrowserRouter([
   {
@@ -46,14 +48,18 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
+const ethereum = new ethers.providers.Web3Provider(window.ethereum);
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
     <ApolloProvider client={client}>
-      < RouterProvider router={router}/>
-    </ApolloProvider>,
+      <Web3Provider value={ethereum}>
+        <RouterProvider router={router}/>
+      </Web3Provider>
+    </ApolloProvider>
   </React.StrictMode>
 );
 
