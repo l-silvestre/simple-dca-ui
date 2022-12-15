@@ -14,8 +14,7 @@ import { Dashboard } from './routes/dashboard';
 import { Invest } from './routes/invest';
 import { Stats } from './routes/stats';
 import { History } from './routes/history';
-import { ethers } from 'ethers';
-import { Web3Provider } from './web3Context';
+import { MetaMaskProvider } from './hooks/useMetamask';
 
 const router = createBrowserRouter([
   {
@@ -23,6 +22,10 @@ const router = createBrowserRouter([
     element: <Root />,
     errorElement: <ErrorPage />,
     children: [
+      {
+        path: '',
+        element: <Dashboard />,
+      },
       {
         path: '/dashboard',
         element: <Dashboard />,
@@ -38,8 +41,8 @@ const router = createBrowserRouter([
       {
         path: '/history',
         element: <History />
-      }
-    ]
+      },
+    ],
   },
 ]);
 
@@ -48,17 +51,15 @@ const client = new ApolloClient({
   cache: new InMemoryCache(),
 });
 
-const ethereum = new ethers.providers.Web3Provider(window.ethereum);
-
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
     <ApolloProvider client={client}>
-      <Web3Provider value={ethereum}>
+      <MetaMaskProvider>
         <RouterProvider router={router}/>
-      </Web3Provider>
+      </MetaMaskProvider>
     </ApolloProvider>
   </React.StrictMode>
 );

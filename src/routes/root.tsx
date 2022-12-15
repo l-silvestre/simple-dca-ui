@@ -9,25 +9,25 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Container } from "@mui/material";
 import GitHubIcon from '@mui/icons-material/GitHub';
-import { MutableRefObject, useContext, useEffect, useRef, useState } from "react";
-import { Web3Context } from "../web3Context";
+import { MutableRefObject, useEffect, useRef, useState } from "react";
 
 const drawerWidth = 240;
 
 export const Root = () => {
   // const outletElement = useOutlet(null);
-  const ethereum = useContext(Web3Context);
+  // const ethereum = useContext(Web3Context);
   const [ selectedRoute, setSelectedRoute ] = useState('dashboard');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleListItemClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
     route: string,
   ) => {
-    setSelectedRoute(route);
+    // setSelectedRoute(route);
     navigate(route);
   };
 
@@ -36,7 +36,8 @@ export const Root = () => {
 
   useEffect(() => {
     setDrawerContentHeight(ref.current.clientHeight);
-  }, [])
+    setSelectedRoute(location.pathname);
+  }, [location])
 
 
   return (
@@ -55,28 +56,28 @@ export const Root = () => {
         <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', flexGrow: 1}}>
           <List>
             <ListItemButton
-              selected={selectedRoute === 'dashboard'}
-              onClick={(event) => handleListItemClick(event, 'dashboard')}
+              selected={selectedRoute === '/dashboard' || selectedRoute === '/'}
+              onClick={(event) => handleListItemClick(event, '/dashboard')}
             >
               <ListItemText primary='Dashboard' />
             </ListItemButton>
             <ListItemButton
-              selected={selectedRoute === 'invest'}
-              disabled={!!ethereum}
-              onClick={(event) => handleListItemClick(event, 'invest')}
+              selected={selectedRoute === '/invest'}
+              //disabled={!!ethereum}
+              onClick={(event) => handleListItemClick(event, '/invest')}
             >
               <ListItemText primary='Invest' />
             </ListItemButton>
             <ListItemButton
-              selected={selectedRoute === 'history'}
-              disabled={!!ethereum}
+              selected={selectedRoute === '/history'}
+              // disabled={!!ethereum}
               onClick={(event) => handleListItemClick(event, 'history')}
             >
               <ListItemText primary='History'/>
             </ListItemButton>
             <ListItemButton
-              selected={selectedRoute === 'stats'}
-              disabled={!!ethereum}
+              selected={selectedRoute === '/stats'}
+              // disabled={!!ethereum}
               onClick={(event) => handleListItemClick(event, 'stats')}
             >
               <ListItemText primary='Stats'/>
@@ -101,7 +102,7 @@ export const Root = () => {
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Container ref={ref}>
           <Toolbar />
-          <Outlet context={drawerContentHeight}/>
+            <Outlet context={drawerContentHeight}/>
         </Container>
       </Box>
     </Box>
