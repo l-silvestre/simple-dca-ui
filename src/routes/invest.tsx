@@ -61,7 +61,6 @@ export const Invest = () => {
         <Card>
           <CardContent>
             <Button onClick={getContractVariables}>contract vars</Button>
-            <Button onClick={() => wrapEth(0.1)}>wrap</Button>
             <Button onClick={() => (addToken('WETH'))}>add weth</Button>
             <Button onClick={() => (swapForUsdc(0.1))}>swap weth for usdc</Button>
             <Button onClick={() => (approve('USDC', 10000))}>approve usdc</Button>

@@ -15,6 +15,9 @@ import { getLogoUrl } from '../helpers';
 import { getAddress } from 'ethers/lib/utils';
 import { USDC_MAIN_ADDERSS, WETH_GOERLI_ADDRESS, WETH_MAIN_ADDRESS } from '../constants';
 import { useState } from 'react';
+import { WrapEthForm } from './WrapEthForm';
+import LoadingButton from '@mui/lab/LoadingButton';
+import { useMetaMask } from '../hooks/useMetamask';
 
 const QontoConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -188,6 +191,10 @@ export const CustomStepper = () => {
     setActiveStep(0);
   };
 
+  const handleWrapEthAdvance = () => {
+
+  }
+
   return (
     <Stack sx={{ width: '100%' }} spacing={4}>
       <Stepper alternativeLabel activeStep={1} connector={<QontoConnector />}>
@@ -204,7 +211,7 @@ export const CustomStepper = () => {
       <Stepper alternativeLabel activeStep={1} connector={<ColorlibConnector />}>
         <Step key='wrapEth'>
           <StepLabel StepIconComponent={ColorlibStepIcon}>Wrap ETH</StepLabel>
-          
+          <WrapEthForm callback={handleWrapEthAdvance}/>
         </Step>
         <Step key='swapWETHtoUSDC'>
           <StepLabel StepIconComponent={ColorlibStepIcon}>Swap WETH for USDC</StepLabel>

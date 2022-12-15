@@ -7,7 +7,6 @@ import { IERC20, ISimpleDCATask } from '../interfaces';
 import { getLogoUrl } from '../helpers';
 import { getAddress } from 'ethers/lib/utils';
 import { Alert, Slide, SlideProps, Snackbar } from '@mui/material';
-
 interface WatchAssetParams {
   type: string; // In the future, other standards will be supported
   options: {
@@ -23,6 +22,7 @@ interface MetamaskContext {
   balance: number;
   chain: number;
   hasWrongChainError: boolean;
+  hasOngoingTransaction: boolean;
   connect: () => Promise<void>,
   getPoolFee: () => Promise<number>,
   wrapEth: (amount: number) => Promise<void>,
@@ -59,6 +59,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [ open, setOpen ] = useState(false);
   const [ snackbarSeverity, setSnackbarSeverity ] = useState('info');
   const [ snackbarText, setSnackbarText ] = useState('');
+  const [ hasOngoingTransaction, setHasOngoingTransaction ] = useState(false);
 
 
   const getPoolFee = async () => {
@@ -75,14 +76,14 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const subscribeTx = (tx: ContractTransaction) => {
     tx.wait().then((value) => {
-      console.log(value);
+      setHasOngoingTransaction(false);
       setOpen(false);
       const etherscan = `https://goerli.etherscan.io/tx`;
       setSnackbarSeverity('success');
       setSnackbarText(`Transaction Successfull... ${value.confirmations} Confirmations\nSee details: ${etherscan}/${value.transactionHash}`);
       setOpen(true);
     }).catch((err) => {
-      console.log(err);
+      setHasOngoingTransaction(false);
       setOpen(false);
       setSnackbarSeverity('error');
       setSnackbarText(`Transaction Errored... See more: ${JSON.stringify(err)}`);
@@ -92,11 +93,20 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const wrapEth = async (amount: number) => {
     const options = { value: ethers.utils.parseEther(`${amount}`) };
-    const tx = await contract.wrapEth(options);
-    setSnackbarSeverity('info');
-    setSnackbarText(`Wrap ethereum called... txHash: ${tx.hash}`);
-    setOpen(true);
-    subscribeTx(tx);
+    try {
+      setHasOngoingTransaction(true);
+      const tx = await contract.wrapEth(options);
+      setSnackbarSeverity('info');
+      setSnackbarText(`Wrap ethereum called... txHash: ${tx.hash}`);
+      setOpen(true);
+      subscribeTx(tx);
+    } catch (error) {
+      setHasOngoingTransaction(false);
+      setOpen(false);
+      setSnackbarSeverity('error');
+      setSnackbarText(`Transaction Errored... See more: ${JSON.stringify(error)}`);
+      setOpen(true);
+    }
   }
 
   const connect = async () => await provider.send("eth_requestAccounts", []);
@@ -186,6 +196,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const allowance = await wethContract.allowance(account, contract.address);
     if (allowance < value) {
       const tx = await wethContract.approve(contract.address, value);
+      setHasOngoingTransaction(true);
       setSnackbarSeverity('info');
       setSnackbarText(`Approving WETH... txHash: ${tx.hash}`);
       setOpen(true);
@@ -195,6 +206,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
     
     const secondTx = await contract.swapWETHtoUSDC(value);
+    setHasOngoingTransaction(true);
     setSnackbarSeverity('info');
     setSnackbarText(`Swap 'WETH' for 'USDC' called... txHash: ${secondTx.hash}`);
     setOpen(true);
@@ -230,6 +242,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const value = ethers.utils.parseUnits(`${amount}`, decimals)
     const tx = await erc20Contract.approve(contract.address, value);
 
+    setHasOngoingTransaction(true);
     setSnackbarSeverity('info');
     setSnackbarText(`Approve '${tokenSymbol}' called... txHash: ${tx.hash}`);
     setOpen(true);
@@ -253,6 +266,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const value = ethers.utils.parseUnits(`${amount}`, decimals);
     const allowance = await usdcContract.allowance(account, contract.address);
     if (allowance.gte(value)) {
+      setHasOngoingTransaction(true);
       const tx = await contract.createTask(value, buyTokenSymbol, duration);
       setSnackbarSeverity('info');
       setSnackbarText(`Create Task called... txHash: ${tx.hash}`);
@@ -267,6 +281,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const depositFunds = async (amount: number) => {
     const tx = await contract.deposit({ value: ethers.utils.parseEther(`${amount}`)});
+    setHasOngoingTransaction(true);
     setSnackbarSeverity('info');
     setSnackbarText(`Depositing Ether to contract... txHash: ${tx.hash}`);
     setOpen(true);
@@ -371,6 +386,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
         createTask,
         getInvestments,
         depositFunds,
+        hasOngoingTransaction,
       }}>
       {children}
       <Snackbar
