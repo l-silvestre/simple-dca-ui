@@ -10,7 +10,7 @@ import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import AddTaskIcon from '@mui/icons-material/AddTask';
 import StepConnector, { stepConnectorClasses } from '@mui/material/StepConnector';
 import { StepIconProps } from '@mui/material/StepIcon';
-import { Avatar, StepContent } from '@mui/material';
+import { Avatar, Box, Button, StepContent, Typography } from '@mui/material';
 import { getLogoUrl } from '../helpers';
 import { getAddress } from 'ethers/lib/utils';
 import { USDC_MAIN_ADDERSS, WETH_GOERLI_ADDRESS, WETH_MAIN_ADDRESS } from '../constants';
@@ -143,11 +143,10 @@ function ColorlibStepIcon(props: StepIconProps) {
   );
 }
 
-const steps = ['Select campaign settings', 'Create an ad group', 'Create an ad'];
-
 export const CustomStepper = () => {
-  const [activeStep, setActiveStep] = useState(0);
-  const [skipped, setSkipped] = useState(new Set<number>());
+  const [ activeStep, setActiveStep ] = useState(0);
+  const [ skipped, setSkipped ] = useState(new Set<number>());
+  const [ completed, setCompleted ] = useState(new Set<number>());
 
   const isStepOptional = (step: number) => {
     return step === 1;
@@ -166,6 +165,7 @@ export const CustomStepper = () => {
 
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
     setSkipped(newSkipped);
+    setCompleted(completed.add(activeStep));
   };
 
   const handleBack = () => {
@@ -189,6 +189,7 @@ export const CustomStepper = () => {
 
   const handleReset = () => {
     setActiveStep(0);
+    setCompleted(new Set<number>());
   };
 
   const handleWrapEthAdvance = () => {
@@ -197,31 +198,62 @@ export const CustomStepper = () => {
 
   return (
     <Stack sx={{ width: '100%' }} spacing={4}>
-      <Stepper alternativeLabel activeStep={1} connector={<QontoConnector />}>
+      <Stepper alternativeLabel activeStep={activeStep} connector={<QontoConnector />}>
         <Step key='wrapEth'>
-          <StepLabel StepIconComponent={QontoStepIcon} />
+          <StepLabel StepIconComponent={QontoStepIcon} StepIconProps={{ active: activeStep === 0, completed:  completed.has(0)}}/>
         </Step>
         <Step key='swapWETHtoUSDC'>
-          <StepLabel StepIconComponent={QontoStepIcon} />
+          <StepLabel StepIconComponent={QontoStepIcon} StepIconProps={{ active: activeStep === 1, completed:  completed.has(1)}}/>
         </Step>
         <Step key='createTask'>
-          <StepLabel StepIconComponent={QontoStepIcon} />
+          <StepLabel StepIconComponent={QontoStepIcon} StepIconProps={{ active: activeStep === 2, completed:  completed.has(2)}}/>
         </Step>
       </Stepper>
-      <Stepper alternativeLabel activeStep={1} connector={<ColorlibConnector />}>
+      <Stepper alternativeLabel activeStep={activeStep} connector={<ColorlibConnector />}>
         <Step key='wrapEth'>
-          <StepLabel StepIconComponent={ColorlibStepIcon}>Wrap ETH</StepLabel>
-          <WrapEthForm callback={handleWrapEthAdvance}/>
+          <StepLabel StepIconComponent={ColorlibStepIcon} StepIconProps={{ active: activeStep === 0, completed:  completed.has(0)}}>Wrap ETH</StepLabel>
         </Step>
         <Step key='swapWETHtoUSDC'>
-          <StepLabel StepIconComponent={ColorlibStepIcon}>Swap WETH for USDC</StepLabel>
-          
+          <StepLabel StepIconComponent={ColorlibStepIcon} StepIconProps={{ active: activeStep === 1, completed:  completed.has(1)}}>Swap WETH for USDC</StepLabel>
         </Step>
         <Step key='createTask'>
-          <StepLabel StepIconComponent={ColorlibStepIcon}>Create Task</StepLabel>
-          
+          <StepLabel StepIconComponent={ColorlibStepIcon} StepIconProps={{ active: activeStep === 2, completed:  completed.has(2)}}>Create Task</StepLabel>
         </Step>
       </Stepper>
+      {activeStep === 3 ? (
+        <React.Fragment>
+          <Typography sx={{ mt: 2, mb: 1 }}>
+            All steps completed - you&apos;re finished
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
+            <Box sx={{ flex: '1 1 auto' }} />
+            <Button onClick={handleReset}>Reset</Button>
+          </Box>
+        </React.Fragment>
+      ) : (
+        <React.Fragment>
+          <Typography sx={{ mt: 2, mb: 1 }}>Step {activeStep + 1}</Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
+            <Button
+              color="inherit"
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              sx={{ mr: 1 }}
+            >
+              Back
+            </Button>
+            <Box sx={{ flex: '1 1 auto' }} />
+            {isStepOptional(activeStep) && (
+              <Button color="inherit" onClick={handleSkip} sx={{ mr: 1 }}>
+                Skip
+              </Button>
+            )}
+            <Button onClick={handleNext}>
+              {activeStep === 2 ? 'Finish' : 'Next'}
+            </Button>
+          </Box>
+        </React.Fragment>
+      )}
     </Stack>
   );
 }
