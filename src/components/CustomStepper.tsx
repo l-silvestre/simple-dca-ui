@@ -18,6 +18,8 @@ import { useState } from 'react';
 import { WrapEthForm } from './WrapEthForm';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { useMetaMask } from '../hooks/useMetamask';
+import { SwapForUSDCForm } from './SwapForUSDCForm';
+import { CreateTaskForm } from './CreateTaskForm';
 
 const QontoConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -149,7 +151,7 @@ export const CustomStepper = () => {
   const [ completed, setCompleted ] = useState(new Set<number>());
 
   const isStepOptional = (step: number) => {
-    return step === 1;
+    return step === 0 || step === 1;
   };
 
   const isStepSkipped = (step: number) => {
@@ -185,6 +187,7 @@ export const CustomStepper = () => {
       newSkipped.add(activeStep);
       return newSkipped;
     });
+    setCompleted(completed.add(activeStep));
   };
 
   const handleReset = () => {
@@ -192,8 +195,11 @@ export const CustomStepper = () => {
     setCompleted(new Set<number>());
   };
 
-  const handleWrapEthAdvance = () => {
-
+  const handleWrapEthAdvance = (value: boolean) => {
+    if (value) {
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      setCompleted(completed.add(activeStep));
+    }
   }
 
   return (
@@ -231,27 +237,13 @@ export const CustomStepper = () => {
           </Box>
         </React.Fragment>
       ) : (
-        <React.Fragment>
-          <Typography sx={{ mt: 2, mb: 1 }}>Step {activeStep + 1}</Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'row', pt: 2 }}>
-            <Button
-              color="inherit"
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              sx={{ mr: 1 }}
-            >
-              Back
-            </Button>
-            <Box sx={{ flex: '1 1 auto' }} />
-            {isStepOptional(activeStep) && (
-              <Button color="inherit" onClick={handleSkip} sx={{ mr: 1 }}>
-                Skip
-              </Button>
-            )}
-            <Button onClick={handleNext}>
-              {activeStep === 2 ? 'Finish' : 'Next'}
-            </Button>
-          </Box>
+        <React.Fragment>          
+          {
+            activeStep === 0 ?
+              <WrapEthForm nextCallback={handleWrapEthAdvance} skipCallback={handleSkip} backCallback={handleBack} />
+              : activeStep === 1 ? <SwapForUSDCForm nextCallback={handleWrapEthAdvance} skipCallback={handleSkip} backCallback={handleBack} />
+                : <CreateTaskForm nextCallback={handleWrapEthAdvance} skipCallback={handleSkip} backCallback={handleBack}/>
+          }
         </React.Fragment>
       )}
     </Stack>

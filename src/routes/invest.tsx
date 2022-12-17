@@ -60,14 +60,6 @@ export const Invest = () => {
       <Box>
         <Card>
           <CardContent>
-            <Button onClick={getContractVariables}>contract vars</Button>
-            <Button onClick={() => (addToken('WETH'))}>add weth</Button>
-            <Button onClick={() => (swapForUsdc(0.1))}>swap weth for usdc</Button>
-            <Button onClick={() => (approve('USDC', 10000))}>approve usdc</Button>
-            <Button onClick={() => (createTask(10000, 421000, 'WETH'))}>create investment task</Button>
-            <Button onClick={() => (getInvestments())}>getInvestments</Button>
-            <Button onClick={() => (depositFunds(0.2))}>deposit</Button>
-            
             <Container>
               <Stack spacing={1}>
                 <Box sx={{ width: '100%' }}>

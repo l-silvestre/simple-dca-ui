@@ -2,7 +2,7 @@ import { useState, useEffect, createContext, FC, ReactNode, useContext, useMemo,
 import { BigNumber, ContractTransaction, ethers } from 'ethers';
 import SimpleDCATask from '../SimpleDCATask.json';
 import ERC20 from '../ERC20.json'
-import { DCA_CONTRACT_ADDRESS, USDC_GOERLI_ADDRESS, WBTC_GOERLI_ADDRESS, WETH_GOERLI_ADDRESS } from '../constants';
+import { DAI_GOERLI_ADDRESS, DCA_CONTRACT_ADDRESS, USDC_GOERLI_ADDRESS, WBTC_GOERLI_ADDRESS, WETH_GOERLI_ADDRESS } from '../constants';
 import { IERC20, ISimpleDCATask } from '../interfaces';
 import { getLogoUrl } from '../helpers';
 import { getAddress } from 'ethers/lib/utils';
@@ -25,14 +25,15 @@ interface MetamaskContext {
   hasOngoingTransaction: boolean;
   connect: () => Promise<void>,
   getPoolFee: () => Promise<number>,
-  wrapEth: (amount: number) => Promise<void>,
+  wrapEth: (amount: number) => Promise<boolean>,
   getContractVariables: () => Promise<void>,
   addToken: (symbol: string) => Promise<void>,
-  swapForUsdc: (amount: number) => Promise<void>,
-  approve: (tokenSymbol: string, amount: number) => Promise<void>,
-  createTask: (amount: number, duration: number, buyTokenSymbol: string) => Promise<void>,
+  swapForUsdc: (amount: number) => Promise<boolean>,
+  approve: (tokenSymbol: string, amount: number) => Promise<boolean>,
+  createTask: (amount: number, duration: number, buyTokenSymbol: string) => Promise<boolean>,
   getInvestments: () => Promise<void>,
   depositFunds: (amount: number) => Promise<void>,
+  balanceOf: (tokenSymbol: string) => Promise<number>,
 }
 
 type TransitionProps = Omit<SlideProps, 'direction'>;
@@ -74,21 +75,24 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     const minInvestmentTIme = await contract.MIN_INVESTMENT_TIME();
   }
 
-  const subscribeTx = (tx: ContractTransaction) => {
-    tx.wait().then((value) => {
+  const subscribeTx = async (tx: ContractTransaction) => {
+    try {
+      const result = await tx.wait();
       setHasOngoingTransaction(false);
       setOpen(false);
       const etherscan = `https://goerli.etherscan.io/tx`;
       setSnackbarSeverity('success');
-      setSnackbarText(`Transaction Successfull... ${value.confirmations} Confirmations\nSee details: ${etherscan}/${value.transactionHash}`);
+      setSnackbarText(`Transaction Successfull... ${result.confirmations} Confirmations\nSee details: ${etherscan}/${result.transactionHash}`);
       setOpen(true);
-    }).catch((err) => {
+      return true;
+    } catch (err) {
       setHasOngoingTransaction(false);
       setOpen(false);
       setSnackbarSeverity('error');
       setSnackbarText(`Transaction Errored... See more: ${JSON.stringify(err)}`);
       setOpen(true);
-    });
+      return false;
+    };
   }
 
   const wrapEth = async (amount: number) => {
@@ -99,13 +103,15 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSnackbarSeverity('info');
       setSnackbarText(`Wrap ethereum called... txHash: ${tx.hash}`);
       setOpen(true);
-      subscribeTx(tx);
+      const result = await subscribeTx(tx);
+      return result;
     } catch (error) {
       setHasOngoingTransaction(false);
       setOpen(false);
       setSnackbarSeverity('error');
       setSnackbarText(`Transaction Errored... See more: ${JSON.stringify(error)}`);
       setOpen(true);
+      return false;
     }
   }
 
@@ -201,7 +207,8 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSnackbarText(`Approving WETH... txHash: ${tx.hash}`);
       setOpen(true);
       subscribeTx(tx);
-      await tx.wait();
+      const tempResult = await tx.wait();
+      if (!tempResult) return false;
       setOpen(false);
     }
     
@@ -210,7 +217,8 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setSnackbarSeverity('info');
     setSnackbarText(`Swap 'WETH' for 'USDC' called... txHash: ${secondTx.hash}`);
     setOpen(true);
-    subscribeTx(secondTx);
+    const result = await subscribeTx(secondTx);
+    return result;
   }
 
   const approve = async (tokenSymbol: string, amount: number) => {
@@ -228,7 +236,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
         erc20Contract = new ethers.Contract(WBTC_GOERLI_ADDRESS, ERC20, signer) as IERC20;
         break;
       default:
-        return;
+        return false;
     }
 
     if (!contract) {
@@ -236,7 +244,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSnackbarSeverity('error');
       setSnackbarText(`'${tokenSymbol} Not Supported.`);
       setOpen(true);
-      return;
+      return false;
     }
     const decimals = await (erc20Contract as any).decimals();
     const value = ethers.utils.parseUnits(`${amount}`, decimals)
@@ -246,7 +254,8 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setSnackbarSeverity('info');
     setSnackbarText(`Approve '${tokenSymbol}' called... txHash: ${tx.hash}`);
     setOpen(true);
-    subscribeTx(tx);
+    const result = await subscribeTx(tx);
+    return result;
   }
 
   const createTask = async (amount: number, duration: number, buyTokenSymbol: string) => {
@@ -258,7 +267,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSnackbarText(`'${allowedToken} Not Supported.`);
       setOpen(true);
 
-      return;
+      return false;
     };
     const signer = provider.getSigner(account);
     const usdcContract = new ethers.Contract(USDC_GOERLI_ADDRESS, ERC20, signer) as IERC20;
@@ -271,12 +280,38 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setSnackbarSeverity('info');
       setSnackbarText(`Create Task called... txHash: ${tx.hash}`);
       setOpen(true);
-      subscribeTx(tx);
+      const result = await subscribeTx(tx);
+      return result;
     } else {
       setSnackbarSeverity('error');
       setSnackbarText(`User has not allowed the necessary amount of USDC`);
       setOpen(true);
+      return false;
     }
+  }
+
+  const balanceOf = async (tokenSymbol: string) => {
+    let erc20Contract;
+    const signer = provider.getSigner(account);
+    switch (tokenSymbol) {
+      case 'WETH':
+        erc20Contract = new ethers.Contract(WETH_GOERLI_ADDRESS, ERC20, signer) as IERC20;
+        break;
+      case 'USDC':
+        erc20Contract = new ethers.Contract(USDC_GOERLI_ADDRESS, ERC20, signer) as IERC20;
+        break;
+      case 'WBTC':
+        erc20Contract = new ethers.Contract(WBTC_GOERLI_ADDRESS, ERC20, signer) as IERC20;
+        break;
+      case 'DAI':
+        erc20Contract = new ethers.Contract(DAI_GOERLI_ADDRESS, ERC20, signer) as IERC20;
+        break;
+      default:
+        return 0;
+    }
+
+    const balance = await erc20Contract.balanceOf(account);
+    return ethers.utils.parseUnits(`${balance}`, 0).toNumber();
   }
 
   const depositFunds = async (amount: number) => {
@@ -289,8 +324,6 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }
 
   useEffect(() => {
-    console.log('effect ran');
-
     window.ethereum.on('chainChanged', async (chainId: number) => {
       if (chainId !== 5) {
         setAccount('');
@@ -387,6 +420,7 @@ export const MetaMaskProvider: FC<{ children: ReactNode }> = ({ children }) => {
         getInvestments,
         depositFunds,
         hasOngoingTransaction,
+        balanceOf,
       }}>
       {children}
       <Snackbar
