@@ -30,7 +30,8 @@
       "@hooks/*": ["./src/hooks/*"],
       "@utils/*": ["./src/utils/*"],
       "@interfaces/*": ["./src/interfaces/*"],
-      "@context/*": ["./src/context/*"]
+      "@context/*": ["./src/context/*"],
+      "@services/*": ["./src/services/*"],
     },
   },
   "include": ["src"]

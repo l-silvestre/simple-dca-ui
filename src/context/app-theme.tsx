@@ -2,7 +2,7 @@ import { useMediaQuery } from '@mui/material';
 import { darkTheme } from '@themes/dark.theme';
 import { lightTheme } from '@themes/light.theme';
 import { ThemeProvider } from '@mui/material/styles';
-import { ReactNode, createContext, useEffect, useMemo, useState } from 'react';
+import { ReactNode, createContext, useCallback, useEffect, useMemo, useState } from 'react';
 
 type themeOptions = 'light' | 'dark';
 interface IAppThemeContext {
@@ -20,9 +20,10 @@ export const AppThemeProvider = ({ children }: { children: ReactNode }) => {
   const prefersLightMode = useMediaQuery('(prefers-color-scheme: light)');
   const [mode, setMode] = useState<themeOptions>('light');
 
-  const toggleTheme = () => {
+  
+  const toggleTheme = useCallback(() => {
     setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light'));
-  };
+  }, [ setMode ]);
 
   const theme = useMemo(() => (mode === 'light' ? lightTheme : darkTheme), [mode]);
   const value = useMemo(() => ({ currentTheme: mode, toggleTheme }), [mode, toggleTheme]);

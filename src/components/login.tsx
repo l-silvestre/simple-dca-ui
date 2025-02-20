@@ -1,10 +1,11 @@
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, List, Typography, useTheme, Avatar, ListItem, ListItemAvatar, ListItemText, Tooltip, Paper } from "@mui/material";
+import { DialogTitle, DialogContent, DialogActions, List, Typography, Avatar, ListItem, ListItemAvatar, ListItemText, Tooltip } from "@mui/material";
 import { Dispatch, SetStateAction, useCallback, useContext, useState } from "react";
 import { EVMWalletContext } from "@context/evm";
 import { motion } from "motion/react"
 import { EIP6963ProviderDetail } from "@interfaces/evm";
 import { useLocalStorage } from "@hooks/useLocalStorage";
 import { enqueueSnackbar } from "notistack";
+import StyledDialog from "./dialog";
 
 // icons
 import HighlightOffRoundedIcon from '@mui/icons-material/HighlightOffRounded';
@@ -14,7 +15,7 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
 import CheckCircle from '@mui/icons-material/CheckCircle';
-import StyledDialog from "./dialog";
+import StyledButton from "./button";
 
 const DialogConfirmUntestedWallet = ({
   open,
@@ -25,7 +26,6 @@ const DialogConfirmUntestedWallet = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   provider: EIP6963ProviderDetail;
 }) => {
-  const theme = useTheme();
   const handleClose = useCallback(() => setOpen(false), [setOpen]);
 
   const { connect } = useContext(EVMWalletContext);
@@ -36,23 +36,18 @@ const DialogConfirmUntestedWallet = ({
     await connect(provider);
     updateHasOnboarded('true');
     setOpen(false);
-  }, [connect]);
+  }, [ provider, connect, updateHasOnboarded, setOpen]);
 
   return (
-    <Dialog
+    <StyledDialog
       open={open}
       onClose={handleClose}
       maxWidth={'sm'}
       fullWidth
-      sx={{
-        backdropFilter: 'blur(10px) !important',
-        '& .MuiPaper-root': {
-          borderRadius: '20px',
-          background:
-            theme.palette.mode === 'dark'
-              ? 'rgba(61, 61, 61, 0.9)'
-              : theme.palette.background.default,
-        },
+      slotProps={{
+        paper: {
+          elevation: 24,
+        }
       }}
     >
       <DialogTitle>
@@ -90,15 +85,15 @@ const DialogConfirmUntestedWallet = ({
           gap: '10px',
         }}
       >
-        <Button
+        <StyledButton
           onClick={handleClose}
           className='plausible-event-name=Connect+WarningUntestedWallet+Popup+Cancelled secondary'
         >
           <div className='flex items-center gap-2'>
             <HighlightOffRoundedIcon /> Cancel
           </div>
-        </Button>
-        <Button
+        </StyledButton>
+        <StyledButton
           onClick={handleEvmConnect}
           disabled={currentProviderValue === provider.info.name}
           className='plausible-event-name=Connect+WarningUntestedWallet+Popup+Agreed+Connect primary'
@@ -107,9 +102,9 @@ const DialogConfirmUntestedWallet = ({
             <CheckCircle />
             Agree and connect
           </div>
-        </Button>
+        </StyledButton>
       </DialogActions>
-    </Dialog>
+    </StyledDialog>
   );
 };
 
@@ -132,7 +127,7 @@ const ProviderElement = ({
     await connect(provider);
     updateHasOnboarded('true');
     setOpen(false);
-  }, [connect]);
+  }, [provider, updateHasOnboarded, setOpen, connect]);
 
   const connectWallet = () => {
     handleEvmConnect();
@@ -162,7 +157,7 @@ const ProviderElement = ({
               />
             </ListItemAvatar>
             <ListItemText primary={provider.info.name} />
-            <Button
+            <StyledButton
               aria-label='Connect this wallet'
               onClick={isRecommendedWallet ? connectWallet : showPopupUntestedWallet}
               disabled={currentProviderValue === provider.info.name}
@@ -170,7 +165,7 @@ const ProviderElement = ({
             >
               {currentProviderValue === provider.info.name ? 'Connected' : 'Connect'}
               <ExitToAppRoundedIcon style={{ width: '22px' }} />
-            </Button>
+            </StyledButton>
           </ListItem>
         )}
 
@@ -188,7 +183,7 @@ const ProviderElement = ({
                 />
               </ListItemAvatar>
               <ListItemText primary={provider.info.name} />
-              <Button
+              <StyledButton
                 aria-label='Connect this wallet'
                 onClick={() => {
                   openMoreInfoWallet(!moreInfoWalletOpened);
@@ -197,7 +192,7 @@ const ProviderElement = ({
               >
                 {currentProviderValue === provider.info.name ? 'Connected' : 'More Info'}
                 <KeyboardArrowDownRoundedIcon style={{ width: '22px' }} />
-              </Button>
+              </StyledButton>
             </ListItem>
 
             {moreInfoWalletOpened && (
@@ -242,7 +237,7 @@ const ProviderElement = ({
                 </div>
                 <p>
                   {'4. Add the URL '}
-                  <Button
+                  <StyledButton
                     /* text={'https://arb1.arbitrum.io/rpc'} */
                     onClick={() => {
                       navigator.clipboard.writeText('https://arb1.arbitrum.io/rpc');
@@ -261,7 +256,7 @@ const ProviderElement = ({
                         />
                       </span>
                     </Tooltip>
-                  </Button>
+                  </StyledButton>
                   {' and click Save.'}
                 </p>
                 <div className='w-full p-2 flex justify-center'>
@@ -276,7 +271,7 @@ const ProviderElement = ({
                 </p>
 
                 <div className='flex justify-end pb-3'>
-                  <Button
+                  <StyledButton
                     aria-label='Connect this wallet'
                     onClick={handleEvmConnect}
                     disabled={currentProviderValue === provider.info.name}
@@ -286,7 +281,7 @@ const ProviderElement = ({
                       ? 'Connected'
                       : 'Confirm and Connect'}
                     <ExitToAppRoundedIcon style={{ width: '22px' }} />
-                  </Button>
+                  </StyledButton>
                 </div>
               </motion.div>
             )}
@@ -311,14 +306,14 @@ const InstallMetaMaskElement = () => {
           <Avatar src={'./icons/metamask.svg'} className='p-[6px] object-contain bg-white' />
         </ListItemAvatar>
         <ListItemText primary={'MetaMask'} />
-        <Button
+        <StyledButton
           aria-label='Install this wallet'
           onClick={installWallet}
           className='plausible-event-name=EVM+Connected secondary'
         >
           Install
           <OpenInNewRoundedIcon style={{ width: '22px' }} />
-        </Button>
+        </StyledButton>
       </ListItem>
     </div>
   );
@@ -338,14 +333,14 @@ const InstallRabbyElement = () => {
           <Avatar src={'./icons/rabby-wallet.png'} className='object-contain bg-white' />
         </ListItemAvatar>
         <ListItemText primary={'Rabby Wallet'} />
-        <Button
+        <StyledButton
           aria-label='Install this wallet'
           onClick={installWallet}
           className='plausible-event-name=EVM+Connected secondary'
         >
           Install
           <OpenInNewRoundedIcon style={{ width: '22px' }} />
-        </Button>
+        </StyledButton>
       </ListItem>
     </div>
   );
@@ -359,7 +354,6 @@ const Login = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) => {
   // components/layout.js
-  const theme = useTheme();
   const { providers } = useContext(EVMWalletContext);
   const handleClose = useCallback(() => setOpen(false), [setOpen]);
   const [dialogWarningUntestedWallet, switchWarningDialogState] = useState(false);
@@ -374,6 +368,11 @@ const Login = ({
         onClose={handleClose}
         maxWidth={'sm'}
         fullWidth
+        slotProps={{
+          paper: {
+            elevation: 24,
+          }
+        }}
       >
         <DialogTitle>
           <Typography
@@ -392,7 +391,7 @@ const Login = ({
             initial={{ x: '-20px', opacity: 0 }}
             animate={{ x: 0, opacity: 1, transition: { duration: 0.4 } }}
           >
-            {providers.length > 0 && (
+            {providers.length >= 0 && (
               <List>
                 <div className='font-semibold font-xl'>Our top recommended wallets</div>
                 {metaMaskProviderFound && (
@@ -456,14 +455,14 @@ const Login = ({
             paddingBottom: '20px',
           }}
         >
-          <Button
+          <StyledButton
             onClick={handleClose}
             className='plausible-event-name=Connect+Popup+Closed secondary'
           >
             <div className='flex items-center gap-2'>
               <HighlightOffRoundedIcon /> Cancel
             </div>
-          </Button>
+          </StyledButton>
         </DialogActions>
       </StyledDialog>
     </>

@@ -10,13 +10,16 @@ import App from './App.tsx'
 import { EVMWalletProvider } from '@context/evm.tsx'
 import { AppThemeProvider } from '@context/app-theme.tsx'
 import { CssBaseline } from '@mui/material'
+import { AlchemyCacheProvider } from '@context/achemy-cache.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppThemeProvider>
       <CssBaseline />
       <EVMWalletProvider>
-        <App />
+        <AlchemyCacheProvider>
+          <App />
+        </AlchemyCacheProvider>
       </EVMWalletProvider>
     </AppThemeProvider>
   </StrictMode>,

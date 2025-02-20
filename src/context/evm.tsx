@@ -1,21 +1,3 @@
-/*
- * Fair Protocol, open source decentralised inference marketplace for artificial intelligence.
- * Copyright (C) 2023 Fair Protocol
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see http://www.gnu.org/licenses/.
- */
-
 import 'viem/window';
 import {
   createContext,
@@ -32,27 +14,18 @@ import { EIP6963ProviderDetail } from '@interfaces/evm';
 import { enqueueSnackbar } from 'notistack';
 import { Backdrop } from '@mui/material';
 import { motion } from 'motion/react';
-import { createWalletClient, custom } from 'viem'
-import { mainnet } from 'viem/chains'
+import { createPublicClient, createWalletClient, custom, EIP1193Provider, erc20Abi, formatUnits, getContract, PublicClient, WalletClient } from 'viem'
 
 // icons
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
+import { arbitrum } from 'viem/chains';
 
-
-/* const [ account ] = await (provider as EIP1193Provider || window.ethereum).request({ method: 'eth_requestAccounts' });
-
-walletClient = createWalletClient({
-  account,
-  chain: CHAIN,
-  transport: custom(provider as EIP1193Provider || window.ethereum)
-});
-publicClient = createPublicClient({
-  chain: CHAIN,
-  transport: custom(provider as EIP1193Provider || window.ethereum)
-}); */
+const USDC_CONTRACT = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
 
 type WalletConnectedAction = {
   type: 'wallet_connected';
+  walletClient: WalletClient;
+  publicClient: PublicClient;
   address: string;
   ethBalance: number;
   usdcBalance: number;
@@ -85,6 +58,9 @@ type EVMWalletAction =
   | SetWalletWrongChainAction;
 
 interface EVMWalletState {
+  walletClient: WalletClient | null;
+  publicClient: PublicClient | null;
+  waitingforWallet: boolean;
   currentAddress: string;
   ethBalance: number;
   usdcBalance: number;
@@ -93,13 +69,10 @@ interface EVMWalletState {
 }
 
 interface IEVMWalletContext extends EVMWalletState {
-  waitingforWallet: boolean;
   connect: (provider?: EIP6963ProviderDetail) => Promise<void>;
   updateUsdcBalance: (newBalance: number) => void;
   switchChain: () => void;
   disconnect: () => void;
-  getPubKey: () => Promise<string>;
-  decrypt: (data: `0x${string}`) => Promise<string>;
 }
 
 const walletReducer = (state: EVMWalletState, action: EVMWalletAction) => {
@@ -111,6 +84,8 @@ const walletReducer = (state: EVMWalletState, action: EVMWalletAction) => {
     case 'wallet_connected':
       return {
         ...state,
+        wallletClient: action.walletClient,
+        publicClient: action.publicClient,
         currentAddress: action.address,
         ethBalance: action.ethBalance,
         usdcBalance: action.usdcBalance,
@@ -119,6 +94,8 @@ const walletReducer = (state: EVMWalletState, action: EVMWalletAction) => {
     case 'wallet_disconnected':
       return {
         ...state,
+        walletClient: null,
+        publicClient: null,
         currentAddress: '',
         ethBalance: 0,
         usdcBalance: 0,
@@ -137,6 +114,8 @@ const walletReducer = (state: EVMWalletState, action: EVMWalletAction) => {
     case 'wallet_wrong_chain':
       return {
         ...state,
+        walletClient: null,
+        publicClient: null,
         currentAddress: '',
         ethBalance: 0,
         usdcBalance: 0,
@@ -153,6 +132,9 @@ const initialState: EVMWalletState = {
   usdcBalance: 0,
   providers: [],
   isWrongChain: false,
+  walletClient: null,
+  publicClient: null,
+  waitingforWallet: false,
 };
 
 const asyncEvmWalletconnect = async (
@@ -161,7 +143,34 @@ const asyncEvmWalletconnect = async (
   provider: EIP6963ProviderDetail,
 ) => {
   try {
-    
+    const [ account ] = await (provider.provider as EIP1193Provider || window.ethereum).request({ method: 'eth_requestAccounts' });
+
+    const walletClient = createWalletClient({
+      account,
+      chain: arbitrum,
+      transport: custom(provider.provider as EIP1193Provider || window.ethereum)
+    });
+
+    const publicClient = createPublicClient({
+      chain: arbitrum,
+      transport: custom(provider.provider as EIP1193Provider || window.ethereum)
+    });
+
+    const ethBalance = Number(await publicClient.getBalance({ address: account }));
+    const contract = getContract({
+      address: USDC_CONTRACT,
+      abi: erc20Abi,
+      client: { wallet: walletClient, public: publicClient }
+    });
+    const unparsedUsdcBalance = await contract.read.balanceOf([ account ]);
+    const decimals = await contract.read.decimals();
+    let usdcBalance = 0;
+    if (typeof unparsedUsdcBalance === 'bigint' && typeof decimals === 'number') {
+      usdcBalance = Number(formatUnits(unparsedUsdcBalance, decimals));
+    }
+
+
+    dispatch({ type: 'wallet_connected', walletClient, publicClient, address: account, ethBalance, usdcBalance });
     setPreviousProvider(provider.info.name);
   } catch (error) {
     console.error('Error connecting wallet', error);
@@ -236,19 +245,6 @@ export const EVMWalletProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getPubKey = async () => {
-    if (currentProvider && state.currentAddress) {
-      const pubKey = await currentProvider.provider.request({
-        method: 'eth_getEncryptionPublicKey',
-        params: [state.currentAddress],
-      });
-
-      return pubKey;
-    } else {
-      return '';
-    }
-  };
-
   // update the connect function with async method
   const value = useMemo(
     () =>
@@ -262,23 +258,8 @@ export const EVMWalletProvider = ({ children }: { children: ReactNode }) => {
           dispatch({ type: 'wallet_disconnected' });
           setPreviousProvider('');
         },
-        getPubKey,
-        decrypt: async (data: `0x${string}`) => {
-          const result = await currentProvider?.provider.request({
-            method: 'eth_decrypt',
-            params: [data, state.currentAddress],
-          });
-
-          try {
-            const parsed = JSON.parse(result ?? '');
-
-            return parsed.data;
-          } catch (err) {
-            return undefined;
-          }
-        },
       } as IEVMWalletContext),
-    [state, currentProvider, dispatch],
+    [state, dispatch, handleConnect, setPreviousProvider],
   );
 
   useEffect(() => {

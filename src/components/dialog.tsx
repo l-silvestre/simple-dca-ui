@@ -1,10 +1,9 @@
-import { Dialog, DialogProps, styled } from "@mui/material";
+import Dialog, { DialogProps } from "@mui/material/Dialog";
+import { styled } from '@mui/material/styles';
 
-const StyledDialog = styled(Dialog)<DialogProps>(({ theme }) => ({
-  backgroundColor: theme.palette.background.paper,
+const StyledDialog = styled(Dialog)<DialogProps>(() => ({
   '& .MuiPaper-root': {
     borderRadius: '32px',
-    background: theme.palette.background.default,
   },
 }));
 
