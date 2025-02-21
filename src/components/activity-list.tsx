@@ -1,40 +1,67 @@
 import { AlchemyCacheContext } from "@context/achemy-cache";
 import { EVMWalletContext } from "@context/evm";
 import { TransferData } from "@interfaces/alchemy";
-import { Card, Box, Stack, Typography, Avatar } from "@mui/material";
+import { QuestionMarkRounded } from "@mui/icons-material";
+import { Card, Box, Stack, Typography, Avatar, CircularProgress } from "@mui/material";
 import { RefObject, useContext, useEffect, useState } from "react";
 
 const Activity = ({ tx }: { tx: TransferData }) => {
 
   const [ logo, setLogo ] = useState<string>('');
+  const [ symbol, setSymbol ] = useState<string>('');
   const { tokenInfo, fetchTokenInfo } = useContext(AlchemyCacheContext);
 
   useEffect(() => {
-    (async () => await fetchTokenInfo(tx.rawContract?.address || ''))();
+    if (tx && tx.rawContract && tx.rawContract.address) {
+      (async () => await fetchTokenInfo(tx.rawContract!.address as string))();
+    }
   }, [ tx, fetchTokenInfo ]);
 
   useEffect(() => {
-    if (tokenInfo && tx.rawContract?.address) {
-      setLogo(tokenInfo[tx.rawContract.address].logo || '');
+    if (tx.category === 'external') {
+      setSymbol('ETH');
+    } else {
+      setSymbol(tx.asset);
+    }
+    
+    if (tokenInfo && tx.rawContract?.address && tokenInfo[tx.rawContract.address] && tokenInfo[tx.rawContract.address].logo) {
+      setLogo(tokenInfo[tx.rawContract.address].logo);
     }
   }, [ tx, tokenInfo ]);
 
-  return <Card elevation={24} sx={{ padding: 2, borderRadius: '32px', gap: 2 }}>
-    <Avatar src={logo} />
-    <Typography noWrap>{tx.from}</Typography>
-    <Typography noWrap>{tx.to}</Typography>
-    <Typography>{tx.value}</Typography>
+  return <Card elevation={24} sx={{ padding: 2, borderRadius: '32px', gap: 2, display: 'flex', alignItems: 'center' }}>
+    { !logo && <Avatar><QuestionMarkRounded /></Avatar>}
+    { logo && <Avatar src={logo} />}
+    <Box display={'flex'} flexDirection={'column'} flexGrow={1}>
+      <Typography noWrap>{tx.from.slice(0, 8)}...</Typography>
+      <Typography noWrap>{tx.to.slice(0,8)}...</Typography>
+    </Box>
+    <Typography>{Number(tx.value).toFixed(2)}{symbol}</Typography>
   </Card>;
 };
 
 const ActivityList = ({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | null>}) => {
   const { currentAddress } = useContext(EVMWalletContext);
   const { transactions, fetchTransactions } = useContext(AlchemyCacheContext);
+  const [ uniqueTokens, setUniqueTokens ] = useState<TransferData[]>([]);
 
 
   useEffect(() => {
     (async () => await fetchTransactions(currentAddress))();
   }, [ currentAddress, fetchTransactions ]);
+
+  useEffect(() => {
+    if (transactions[currentAddress]) {
+      const tokens = transactions[currentAddress].filter((tx, index, self) => self.findIndex((t) => t.hash === tx.hash) === index);
+      setUniqueTokens(tokens);
+    }
+  }, [ transactions, currentAddress ]);
+
+  if (!transactions[currentAddress]) {
+    return <Box sx={{ padding: '24px' }}>
+      <CircularProgress />
+    </Box>;
+  }
 
   return <Box ref={scrollRef} sx={{
     padding: '24px',
@@ -43,7 +70,7 @@ const ActivityList = ({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | nul
     overflowY: 'scroll',
   }}>
     <Stack spacing={4}>
-      {transactions[currentAddress].map((tx) => (<Activity key={tx.hash} tx={tx} />))}
+      {uniqueTokens.map((tx) => (<Activity key={tx.hash} tx={tx} />))}
     </Stack>
   </Box>;
 };

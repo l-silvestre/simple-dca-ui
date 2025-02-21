@@ -14,7 +14,7 @@ import { EIP6963ProviderDetail } from '@interfaces/evm';
 import { enqueueSnackbar } from 'notistack';
 import { Backdrop } from '@mui/material';
 import { motion } from 'motion/react';
-import { createPublicClient, createWalletClient, custom, EIP1193Provider, erc20Abi, formatUnits, getContract, PublicClient, WalletClient } from 'viem'
+import { createPublicClient, createWalletClient, custom, EIP1193Provider, erc20Abi, formatEther, formatUnits, getContract, PublicClient, WalletClient } from 'viem'
 
 // icons
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
@@ -156,7 +156,7 @@ const asyncEvmWalletconnect = async (
       transport: custom(provider.provider as EIP1193Provider || window.ethereum)
     });
 
-    const ethBalance = Number(await publicClient.getBalance({ address: account }));
+    const ethBalance = Number(formatEther(await publicClient.getBalance({ address: account })));
     const contract = getContract({
       address: USDC_CONTRACT,
       abi: erc20Abi,

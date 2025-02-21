@@ -1,7 +1,7 @@
 import { EVMWalletContext } from "@context/evm";
 import { OpenInNew } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, CardHeader, ClickAwayListener, Divider, Drawer, IconButton, ToggleButton, ToggleButtonGroup, toggleButtonGroupClasses, Typography, useTheme } from "@mui/material";
-import { SyntheticEvent, useContext, useRef, useState } from "react";
+import { SyntheticEvent, useContext, useEffect, useRef, useState } from "react";
 
 // icons
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
@@ -10,10 +10,14 @@ import ActivityList from "./activity-list";
 import useScroll from "@hooks/useScroll";
 import { motion } from "motion/react";
 import Balances from "./balances";
+import { AlchemyCacheContext } from "@context/achemy-cache";
+import { formatUnits } from "viem";
 
 const WalletDetails = ({ open, setOpen }: { open: boolean, setOpen: (status: boolean) => void }) => {
   const theme = useTheme();
-  const { currentAddress, disconnect } = useContext(EVMWalletContext);
+  const { currentAddress, ethBalance, disconnect } = useContext(EVMWalletContext);
+  const { balances, tokenUsdPrice, fetchBalances, fetchTokenPrices } = useContext(AlchemyCacheContext);
+  const [ portfolioValue, setPortfolioValue ] = useState<number>(0);
 
   const anchorRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -44,6 +48,53 @@ const WalletDetails = ({ open, setOpen }: { open: boolean, setOpen: (status: boo
       setTab(newValue);
     }
   };
+
+  useEffect(() => {
+    if (currentAddress !== '') {
+      (async () => {
+        try {
+          await fetchBalances(currentAddress);
+        } catch (error) {
+          console.error(error);
+        }
+      })();
+    }
+  }, [ currentAddress, fetchBalances ]);
+
+  useEffect(() => {
+    if (balances && balances[currentAddress]?.filter((balance) => !tokenUsdPrice[balance.contractAddress]).length > 0) {
+      (async () => {
+        try {
+          await fetchTokenPrices(balances[currentAddress].filter((balance) => !tokenUsdPrice[balance.contractAddress]).map(el => el.contractAddress));
+        } catch (error) {
+          console.error(error);
+        }
+      })();
+    }
+  }, [ balances, currentAddress, tokenUsdPrice ]);
+
+  /* useEffect(() => {
+    if (balances[currentAddress].filter((balance) => !tokenInfo[balance.contractAddress]).length > 0) {
+      (async () => {
+        try {
+          await fetchTokenInfo(balances[currentAddress].filter((balance) => !tokenInfo[balance.contractAddress]).map(el => el.contractAddress), false);
+        } catch (error) {
+          console.error(error);
+        }
+      })();
+    }
+  }, [ balances, currentAddress, tokenUsdPrice ]);
+ */
+  useEffect(() => {
+    if (balances[currentAddress] && ethBalance && balances[currentAddress].filter((balance) => !tokenUsdPrice[balance.contractAddress]).length === 0) {
+      let totalValue = ethBalance;
+      balances[currentAddress].forEach((balance) => {
+        const parseTokenBalance = formatUnits(BigInt(balance.tokenBalance), 18);
+        totalValue += Number(parseTokenBalance) * tokenUsdPrice[balance.contractAddress];
+      });
+      setPortfolioValue(totalValue);
+    }
+  }, [ balances, tokenUsdPrice, currentAddress, ethBalance ]);
 
   return <Drawer
     open={open}
@@ -115,6 +166,9 @@ const WalletDetails = ({ open, setOpen }: { open: boolean, setOpen: (status: boo
                   },
                 }}
               />
+              <CardContent sx={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
+                {portfolioValue}
+              </CardContent>
               <CardContent  sx={{ display: 'flex', flexDirection: 'row', gap: '8px' }}>
                 <Button variant="contained" sx={{ borderRadius: '32px'}} color="secondary">Buy</Button>
                 <Button variant="contained" sx={{ borderRadius: '32px'}} color="secondary">Sell</Button>

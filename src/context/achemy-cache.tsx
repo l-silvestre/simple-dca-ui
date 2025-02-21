@@ -1,6 +1,7 @@
 import { timeframeOptions, TokenBalance, TokenHistoryInfo, TokenMetadata, TransferData } from "@interfaces/alchemy";
 import { getTokenMetadata, getTokenPriceHistory, getPriceForTokensByAddresses, getAddressTxHistory, getAddressTokenBalances } from "@services/alchemy";
-import { createContext, ReactNode, useCallback, useEffect, useReducer } from "react";
+import { createContext, ReactNode, useCallback, useEffect, useMemo, useReducer } from "react";
+import { Mutex } from 'async-mutex';
 
 interface AlchemyCache {
   tokenInfo: {
@@ -81,17 +82,16 @@ const initialState: AlchemyCache = {
 };
 
 interface IAlchemyCacheContext extends AlchemyCache {
-  fetchTokenInfo: (address: string) => Promise<void>;
-  fetchTokenPriceHistory: (address: string, timeframe: timeframeOptions) => Promise<void>;
-  fetchTokenPrice: (addresses: string) => Promise<void>;
-  fetchTokenPrices: (addresses: string[]) => Promise<void>;
-  fetchTransactions: (address: string) => Promise<void>;
-  fetchBalances: (address: string) => Promise<void>;
+  fetchTokenInfo: (address: string, ignoreCache?: boolean) => Promise<void>;
+  fetchTokenPriceHistory: (address: string, timeframe: timeframeOptions, ignoreCache?: boolean) => Promise<void>;
+  fetchTokenPrice: (addresses: string, ignoreCache?: boolean) => Promise<void>;
+  fetchTokenPrices: (addresses: string[], ignoreCache?: boolean) => Promise<void>;
+  fetchTransactions: (address: string, ignoreCache?: boolean) => Promise<void>;
+  fetchBalances: (address: string, ignoreCache?: boolean) => Promise<void>;
 }
 
 
 const cacheReducer = (state: AlchemyCache, action: AlchemyCacheActions) => {
-  console.log(action, 'action dispatched');
   if (!action) {
     return state;
   }
@@ -159,12 +159,23 @@ export const AlchemyCacheContext = createContext<IAlchemyCacheContext>({} as IAl
 
 export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cacheReducer, initialState);
+  const fetchInfoMutex = useMemo(() => new Mutex(), []);
+  const fetchTokenPricesMutex = useMemo(() => new Mutex(), []);
+  const fetchPriceMutex = useMemo(() => new Mutex(), []);
+  const fetchPriceHistoryMutex = useMemo(() => new Mutex(), []);
+  const fetchTransactionsMutex = useMemo(() => new Mutex(), []);
+  const fetchBalancesMutex = useMemo(() => new Mutex(), []);
 
   const fetchTokenInfo = useCallback(async (address: string, ignoreCache = false) => {
     const tokenInfo = state.tokenInfo[address];
     if (!tokenInfo || ignoreCache) {
+      if (fetchInfoMutex.isLocked()) {
+        return;
+      }
+      const release = await fetchInfoMutex.acquire();
       const metadata = await getTokenMetadata(address);
       if (!metadata) {
+        release();
         throw new Error('Error fetching data');
       }
       dispatch({
@@ -174,33 +185,49 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
           metadata
         }
       });
+      release();
     }
-  }, [ state ]);
+  }, [ fetchInfoMutex, state ]);
 
   const fetchTokenPrices = useCallback(async (addresses: string[], ignoreCache = false) => {
     const tokenPrices = state.tokenUsdPrice;
     const missingAddresses = addresses.filter(address => !tokenPrices[address]);
     if (missingAddresses.length > 0 || ignoreCache) {
+      if (fetchTokenPricesMutex.isLocked()) {
+        return;
+      }
+      const release = await fetchTokenPricesMutex.acquire();
       const prices = await getPriceForTokensByAddresses(ignoreCache ? addresses : missingAddresses);
       if (!prices) {
+        release();
         throw new Error('Error fetching data');
       }
       const newPrices: { [address: string]: number } = {};
       prices.forEach(price => {
-        newPrices[price.address] = Number(price.prices[0].value);
+        if (price.prices.length === 0) {
+          newPrices[price.address] = 0;
+        } else {
+          newPrices[price.address] = Number(price.prices[0].value);
+        }
       });
       dispatch({
         type: 'add_or_update_multiple_token_price',
         data: newPrices
       });
+      release();
     }
-  }, [ state ]);
+  }, [ fetchTokenPricesMutex, state ]);
 
   const fetchTokenPrice = useCallback(async (address: string, ignoreCache = false) => {
     const tokenPrice = state.tokenUsdPrice[address];
     if (!tokenPrice || ignoreCache) {
+      if (fetchTokenPricesMutex.isLocked()) {
+        return;
+      }
+      const release = await fetchTokenPricesMutex.acquire();
       const price = await getPriceForTokensByAddresses([address]);
       if (!price) {
+        release();
         throw new Error('Error fetching data');
       }
       dispatch({
@@ -210,14 +237,20 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
           currentPrice: Number(price[0].prices[0].value)
         }
       });
+      release();
     }
-  }, [ state ]);
+  }, [ fetchPriceMutex, state ]);
 
   const fetchTokenPriceHistory = useCallback(async (address: string, timeframe: timeframeOptions, ignoreCache = false) => {
     const tokenPriceHistory = state.tokenPriceHistory[address] && state.tokenPriceHistory[address][timeframe];
     if (!tokenPriceHistory || ignoreCache) {
+      if (fetchPriceHistoryMutex.isLocked()) {
+        return;
+      }
+      const release = await fetchPriceHistoryMutex.acquire();
       const priceHistory = await getTokenPriceHistory(address, timeframe);
       if (!priceHistory) {
+        release();
         throw new Error('Error fetching data');
       }
       dispatch({
@@ -228,14 +261,20 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
           priceHistory
         }
       });
+      release();
     }
-  }, [ state ]);
+  }, [ fetchPriceHistoryMutex, state ]);
 
   const fetchTransactions = useCallback(async (address: string, ignoreCache = false) => {
     const transactions = state.transactions[address];
     if (!transactions || ignoreCache) {
+      if (fetchTransactionsMutex.isLocked()) {
+        return;
+      }
+      const release = await fetchTransactionsMutex.acquire();
       const txHistory = await getAddressTxHistory(address);
       if (!txHistory) {
+        release();
         throw new Error('Error fetching data');
       }
       dispatch({
@@ -245,14 +284,20 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
           transactions: txHistory.transfers
         }
       });
+      release();
     }
-  }, [ state ]);
+  }, [ fetchTransactionsMutex, state ]);
 
   const fetchBalances = useCallback(async (address: string, ignoreCache = false) => {
     const balances = state.balances[address];
     if (!balances || ignoreCache) {
+      if (fetchBalancesMutex.isLocked()) {
+        return;
+      }
+      const release = await fetchBalancesMutex.acquire();
       const tokenBalances = await getAddressTokenBalances(address);
       if (!tokenBalances) {
+        release();
         throw new Error('Error fetching data');
       }
       dispatch({
@@ -262,8 +307,9 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
           balances: tokenBalances
         }
       });
+      release();
     }
-  }, [ state ]);
+  }, [ fetchBalancesMutex, state ]);
 
   useEffect(() => {
     // save to localStorage on every state change

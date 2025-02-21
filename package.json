@@ -19,6 +19,7 @@
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.5",
     "@mui/x-charts": "^7.27.0",
+    "async-mutex": "^0.5.0",
     "motion": "^12.4.4",
     "notistack": "^3.0.2",
     "react": "^19.0.0",

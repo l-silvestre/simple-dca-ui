@@ -64,9 +64,7 @@ export interface TransferData {
     address?: string,
     decimal?: string
   },
-  metadata: {
-    blockTimestamp: string
-  }
+  asset: string,
 }
 
 export interface TxHistoryData {

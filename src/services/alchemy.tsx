@@ -1,4 +1,4 @@
-import { TokenBalanceResponses, timeframeOptions, TokenHistoryResponse, TokenMetadataResponse, TokenPriceByAddressResponse, TokenPriceBySymbolResponse, TxHistoryResponse } from "@interfaces/alchemy";
+import { TokenBalanceResponses, timeframeOptions, TokenHistoryResponse, TokenMetadataResponse, TokenPriceByAddressResponse, TokenPriceBySymbolResponse, TxHistoryResponse, TxHistoryData } from "@interfaces/alchemy";
 import { fetchData } from "@utils/common";
 
 const ALCHEMY_BASE_URL = 'https://api.g.alchemy.com';
@@ -93,7 +93,7 @@ export const getTokenMetadata = async (address: string) => {
 }
 
 export const getAddressTxHistory = async (address: string) => {
-  const options = {
+  const outOptions = {
     method: 'POST',
     headers: {accept: 'application/json', 'content-type': 'application/json'},
     body: JSON.stringify({
@@ -108,9 +108,30 @@ export const getAddressTxHistory = async (address: string) => {
       }]
     })
   };
-  const { result: data } = await fetchData<TxHistoryResponse>(`${ARBITRUM_ALCHEMY_BASE_URL}/${ALCHEMY_TOKEN}`, options);
+  const { result: outData } = await fetchData<TxHistoryResponse>(`${ARBITRUM_ALCHEMY_BASE_URL}/${ALCHEMY_TOKEN}`, outOptions);
 
-  return data;
+  const inOptions = {
+    method: 'POST',
+    headers: {accept: 'application/json', 'content-type': 'application/json'},
+    body: JSON.stringify({
+      id: 1,
+      jsonrpc: '2.0',
+      method: 'alchemy_getAssetTransfers',
+      params:[{
+        fromBlock: '0x0',
+        toBlock: 'latest',
+        toAddress: address,
+        category: ['external', 'erc20']
+      }]
+    })
+  };
+
+  const { result: inData } = await fetchData<TxHistoryResponse>(`${ARBITRUM_ALCHEMY_BASE_URL}/${ALCHEMY_TOKEN}`, inOptions);
+  
+  return {
+    pageKey: '0',
+    transfers: outData.transfers.concat(inData.transfers).sort((a, b) => Number(BigInt(a.blockNum)) - Number(BigInt(b.blockNum)))
+  } as TxHistoryData;
 };
 
 export const getAddressTokenBalances = async (address: string) => {
