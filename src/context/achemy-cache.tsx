@@ -21,6 +21,9 @@ interface AlchemyCache {
   balances: {
     [address: string]: TokenBalance[];
   };
+  errors: {
+   [ cacheSection: string ]: string;
+  }
 }
 
 type AddOrUpdateTokenInfo = {
@@ -63,6 +66,16 @@ type LoadAction = {
   data: AlchemyCache;
 };
 
+type AddError = {
+  type: 'add_error';
+  data: { cacheSection: string, error: string }
+}
+
+type RemoveError = {
+  type: 'remove_error';
+  data: { cacheSection: string }
+}
+
 type AlchemyCacheActions =
   | AddOrUpdateTokenInfo
   | AddOrUpdateTokenPrice
@@ -71,7 +84,9 @@ type AlchemyCacheActions =
   | UpdateTransactions
   | UpdateBalances
   | ResetAction
-  | LoadAction;
+  | LoadAction
+  | AddError
+  | RemoveError;
 
 const initialState: AlchemyCache = {
   tokenInfo: {},
@@ -79,6 +94,7 @@ const initialState: AlchemyCache = {
   tokenPriceHistory: {},
   transactions: {},
   balances: {},
+  errors: {},
 };
 
 interface IAlchemyCacheContext extends AlchemyCache {
@@ -150,6 +166,21 @@ const cacheReducer = (state: AlchemyCache, action: AlchemyCacheActions) => {
       return initialState;
     case 'load':
       return action.data;
+    case 'add_error':
+      return {
+        ...state,
+        errors: {
+          ...state.errors,
+          [action.data.cacheSection]: action.data.error
+        }
+      };
+    case 'remove_error':
+      const errors = { ...state.errors };
+      delete errors[action.data.cacheSection];
+      return {
+        ...state,
+        errors
+      };
     default:
       return state;
   }
@@ -175,6 +206,13 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
       const release = await fetchInfoMutex.acquire();
       const metadata = await getTokenMetadata(address);
       if (!metadata) {
+        dispatch({
+          type: 'add_error',
+          data: {
+            cacheSection: 'tokenInfo',
+            error: 'Error fetching data'
+          }
+        });
         release();
         throw new Error('Error fetching data');
       }
@@ -199,6 +237,13 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
       const release = await fetchTokenPricesMutex.acquire();
       const prices = await getPriceForTokensByAddresses(ignoreCache ? addresses : missingAddresses);
       if (!prices) {
+        dispatch({
+          type: 'add_error',
+          data: {
+            cacheSection: 'tokenUsdPrices',
+            error: 'Error fetching data'
+          }
+        })
         release();
         throw new Error('Error fetching data');
       }
@@ -227,6 +272,13 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
       const release = await fetchTokenPricesMutex.acquire();
       const price = await getPriceForTokensByAddresses([address]);
       if (!price) {
+        dispatch({
+          type: 'add_error',
+          data: {
+            cacheSection: 'tokenUsdPrice',
+            error: 'Error fetching data'
+          }
+        });
         release();
         throw new Error('Error fetching data');
       }
@@ -250,6 +302,13 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
       const release = await fetchPriceHistoryMutex.acquire();
       const priceHistory = await getTokenPriceHistory(address, timeframe);
       if (!priceHistory) {
+        dispatch({
+          type: 'add_error',
+          data: {
+            cacheSection: 'tokenPriceHistory',
+            error: 'Error fetching data'
+          }
+        });
         release();
         throw new Error('Error fetching data');
       }
@@ -274,6 +333,13 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
       const release = await fetchTransactionsMutex.acquire();
       const txHistory = await getAddressTxHistory(address);
       if (!txHistory) {
+        dispatch({
+          type: 'add_error',
+          data: {
+            cacheSection: 'transactions',
+            error: 'Error fetching data'
+          }
+        });
         release();
         throw new Error('Error fetching data');
       }
@@ -297,6 +363,13 @@ export const AlchemyCacheProvider = ({ children }: { children: ReactNode }) => {
       const release = await fetchBalancesMutex.acquire();
       const tokenBalances = await getAddressTokenBalances(address);
       if (!tokenBalances) {
+        dispatch({
+          type: 'add_error',
+          data: {
+            cacheSection: 'balances',
+            error: 'Error fetching data'
+          }
+        });
         release();
         throw new Error('Error fetching data');
       }

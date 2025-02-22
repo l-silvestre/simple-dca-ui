@@ -1,5 +1,6 @@
 import { AlchemyCacheContext } from "@context/achemy-cache";
 import { EVMWalletContext } from "@context/evm";
+import useTokenInfo from "@hooks/useTokenInfo";
 import { TransferData } from "@interfaces/alchemy";
 import { QuestionMarkRounded } from "@mui/icons-material";
 import { Card, Box, Stack, Typography, Avatar, CircularProgress } from "@mui/material";
@@ -9,13 +10,7 @@ const Activity = ({ tx }: { tx: TransferData }) => {
 
   const [ logo, setLogo ] = useState<string>('');
   const [ symbol, setSymbol ] = useState<string>('');
-  const { tokenInfo, fetchTokenInfo } = useContext(AlchemyCacheContext);
-
-  useEffect(() => {
-    if (tx && tx.rawContract && tx.rawContract.address) {
-      (async () => await fetchTokenInfo(tx.rawContract!.address as string))();
-    }
-  }, [ tx, fetchTokenInfo ]);
+  const tokenInfo = useTokenInfo(tx.rawContract?.address);
 
   useEffect(() => {
     if (tx.category === 'external') {
@@ -24,8 +19,8 @@ const Activity = ({ tx }: { tx: TransferData }) => {
       setSymbol(tx.asset);
     }
     
-    if (tokenInfo && tx.rawContract?.address && tokenInfo[tx.rawContract.address] && tokenInfo[tx.rawContract.address].logo) {
-      setLogo(tokenInfo[tx.rawContract.address].logo);
+    if (tokenInfo && tx.rawContract?.address && tokenInfo && tokenInfo.logo) {
+      setLogo(tokenInfo.logo);
     }
   }, [ tx, tokenInfo ]);
 
